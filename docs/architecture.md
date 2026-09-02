@@ -1,5 +1,7 @@
 # Architecture
 
+AP層からRDSまでの接続方式、Secret取得、SQL、CodeDeploy時のDB処理は [application-database-design.md](application-database-design.md) を参照してください。
+
 ## 論理・ネットワーク構成
 
 ```text
