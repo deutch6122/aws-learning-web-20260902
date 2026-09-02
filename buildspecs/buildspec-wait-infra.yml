@@ -5,9 +5,22 @@ phases:
       - ASG_NAME="${PROJECT_NAME}-asg${NAME_SUFFIX_PHYSICAL}"
       - TG_NAME="${PROJECT_NAME}-tg${NAME_SUFFIX_PHYSICAL}"
       - TG_ARN=$(aws elbv2 describe-target-groups --names "$TG_NAME" --query 'TargetGroups[0].TargetGroupArn' --output text)
-      - aws autoscaling wait group-in-service --auto-scaling-group-names "$ASG_NAME"
-      - INSTANCE_ID=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$ASG_NAME" --query 'AutoScalingGroups[0].Instances[?LifecycleState==`InService`]|[0].InstanceId' --output text)
       - |
+        INSTANCE_ID=""
+        for attempt in $(seq 1 60); do
+          INSTANCE_ID=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$ASG_NAME" --query 'AutoScalingGroups[0].Instances[?LifecycleState==`InService`]|[0].InstanceId' --output text)
+          if [ "$INSTANCE_ID" != "None" ] && [ -n "$INSTANCE_ID" ]; then
+            echo "ASG instance in service: $INSTANCE_ID"
+            break
+          fi
+          echo "Waiting for ASG instance ($attempt/60)"
+          sleep 10
+        done
+        if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
+          echo "No InService instance found in $ASG_NAME"
+          exit 1
+        fi
+
         for attempt in $(seq 1 60); do
           HEALTH=$(aws elbv2 describe-target-health --target-group-arn "$TG_ARN" --query "TargetHealthDescriptions[?Target.Id=='$INSTANCE_ID'].TargetHealth.State|[0]" --output text)
           SSM=$(aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$INSTANCE_ID" --query 'InstanceInformationList[0].PingStatus' --output text)
