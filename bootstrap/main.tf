@@ -106,7 +106,12 @@ resource "aws_iam_role_policy" "codepipeline" {
         Effect = "Allow", Action = ["codedeploy:CreateDeployment", "codedeploy:GetApplicationRevision", "codedeploy:GetDeployment", "codedeploy:GetDeploymentConfig", "codedeploy:RegisterApplicationRevision"], Resource = "*"
       },
       {
-        Effect = "Allow", Action = ["codestar-connections:UseConnection"], Resource = var.codestar_connection_arn
+        Effect = "Allow",
+        Action = [
+          "codeconnections:UseConnection",
+          "codestar-connections:UseConnection"
+        ],
+        Resource = var.codestar_connection_arn
       }
     ]
 
