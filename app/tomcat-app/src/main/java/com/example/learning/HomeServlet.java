@@ -27,7 +27,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@WebServlet(urlPatterns = {"/", "/app"})
+@WebServlet(urlPatterns = {"", "/app"})
 public class HomeServlet extends HttpServlet {
     private static final ObjectMapper JSON = new ObjectMapper();
 
