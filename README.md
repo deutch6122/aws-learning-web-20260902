@@ -19,6 +19,8 @@ Alarm -> SNS Email; SNS -> AWS Chatbot or User Notifications -> Slack (manual co
 
 詳細は [docs/architecture.md](docs/architecture.md) と [docs/operations.md](docs/operations.md) を参照してください。
 
+ポートフォリオ公開用の叩き台は [docs/portfolio-case-study.md](docs/portfolio-case-study.md)、公開前チェックは [docs/publish-checklist.md](docs/publish-checklist.md) を参照してください。
+
 ## CI/CDフロー
 
 ```text
