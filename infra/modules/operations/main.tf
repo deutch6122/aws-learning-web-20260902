@@ -1,7 +1,7 @@
 data "aws_partition" "current" {}
 
 resource "aws_ssm_patch_baseline" "this" {
-  name                                 = "${var.project_name}-baseline${var.name_suffix_tag}"
+  name                                 = "custom-${var.project_name}-baseline${var.name_suffix_tag}"
   description                          = "Amazon Linux 2023 monthly security patch baseline"
   operating_system                     = "AMAZON_LINUX_2023"
   approved_patches_enable_non_security = false
