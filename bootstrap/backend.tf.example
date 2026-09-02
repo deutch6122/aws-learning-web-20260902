@@ -1,0 +1,11 @@
+# bootstrap自身もリモートstate化する場合に backend.tf へコピーして値を置換します。
+# 初回はlocal stateのまま適用し、state bucket作成後に移行してください。
+terraform {
+  backend "s3" {
+    bucket       = "aws-learning-web-tfstate-20260902-ACCOUNT_ID"
+    key          = "bootstrap/terraform.tfstate"
+    region       = "ap-northeast-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+}

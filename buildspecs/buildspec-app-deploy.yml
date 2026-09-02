@@ -1,0 +1,20 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+  pre_build:
+    commands:
+      - mvn -version
+  build:
+    commands:
+      - mvn -f app/tomcat-app/pom.xml clean package
+      - install -d package/scripts package/db-scripts
+      - install -m 0644 app/tomcat-app/target/ROOT.war package/ROOT.war
+      - install -m 0644 app/deploy/appspec.yml package/appspec.yml
+      - install -m 0755 app/deploy/scripts/*.sh package/scripts/
+      - install -m 0755 app/scripts/*.py package/db-scripts/
+artifacts:
+  base-directory: package
+  files:
+    - '**/*'

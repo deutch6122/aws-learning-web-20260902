@@ -1,0 +1,6 @@
+aws_region = "ap-northeast-1"
+github_owner = "your-github-user-or-org"
+github_repo = "your-repository-name"
+github_branch = "main"
+codestar_connection_arn = "arn:aws:codestar-connections:ap-northeast-1:123456789012:connection/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+enable_manual_approval = false

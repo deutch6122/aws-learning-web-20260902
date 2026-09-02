@@ -1,0 +1,21 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - curl -fsSLo /tmp/terraform.zip "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip"
+      - unzip -q /tmp/terraform.zip -d /usr/local/bin
+  pre_build:
+    commands:
+      - terraform version
+      - terraform -chdir=infra fmt -check -recursive
+      - terraform -chdir=infra init -input=false -backend-config="bucket=${TF_STATE_BUCKET}"
+      - terraform -chdir=infra validate
+  build:
+    commands:
+      - terraform -chdir=infra plan -input=false -no-color -out=tfplan
+      - terraform -chdir=infra show -no-color tfplan > infra/tfplan.txt
+artifacts:
+  files:
+    - infra/tfplan
+    - infra/tfplan.txt
+  discard-paths: no
