@@ -40,6 +40,7 @@ public class HomeServlet extends HttpServlet {
             JsonNode secret = loadSecret();
             String url = "jdbc:mysql://" + secret.get("host").asText() + ":" + secret.get("port").asInt()
                     + "/" + secret.get("dbname").asText() + "?useSSL=true&requireSSL=false&serverTimezone=UTC";
+            Class.forName("com.mysql.cj.jdbc.Driver");
             try (Connection connection = DriverManager.getConnection(url, secret.get("username").asText(), secret.get("password").asText());
                  Statement statement = connection.createStatement();
                  ResultSet rows = statement.executeQuery("SELECT title, body, created_at FROM messages ORDER BY id")) {
