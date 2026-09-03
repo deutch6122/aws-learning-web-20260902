@@ -22,6 +22,56 @@ html, body { min-width: 320px; min-height: 100%; margin: 0; }
 body { line-height: 1.65; overflow: hidden; }
 button { font: inherit; }
 
+/* Leafletの外部CSSが遅い場合も、地図タイルの配置崩れを防ぐ最小スタイル。 */
+.leaflet-pane, .leaflet-tile, .leaflet-marker-icon, .leaflet-marker-shadow,
+.leaflet-tile-container, .leaflet-pane > svg, .leaflet-pane > canvas,
+.leaflet-zoom-box, .leaflet-image-layer, .leaflet-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.leaflet-container { overflow: hidden; -webkit-tap-highlight-color: transparent; }
+.leaflet-tile, .leaflet-marker-icon, .leaflet-marker-shadow {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.leaflet-tile { visibility: hidden; }
+.leaflet-tile-loaded { visibility: inherit; }
+.leaflet-zoom-animated { transform-origin: 0 0; }
+.leaflet-map-pane { z-index: 400; }
+.leaflet-tile-pane { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane { z-index: 500; }
+.leaflet-marker-pane { z-index: 600; }
+.leaflet-tooltip-pane { z-index: 650; }
+.leaflet-popup-pane { z-index: 700; }
+.leaflet-control { position: relative; z-index: 800; pointer-events: auto; }
+.leaflet-top, .leaflet-bottom { position: absolute; z-index: 1000; pointer-events: none; }
+.leaflet-top { top: 0; }
+.leaflet-right { right: 0; }
+.leaflet-bottom { bottom: 0; }
+.leaflet-left { left: 0; }
+.leaflet-control-zoom {
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, .35);
+}
+.leaflet-control-zoom a {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-bottom: 1px solid #ccc;
+  background: #fff;
+  color: #222;
+  text-align: center;
+  text-decoration: none;
+  font: 700 22px/30px Arial, sans-serif;
+}
+.leaflet-control-attribution { margin: 0; padding: 0 5px; background: rgba(255, 255, 255, .8); }
+.leaflet-bottom .leaflet-control { margin-bottom: 10px; }
+.leaflet-left .leaflet-control { margin-left: 10px; }
+.leaflet-right .leaflet-control { margin-right: 10px; }
+
 .skip-link {
   position: fixed;
   z-index: 2000;
@@ -44,6 +94,22 @@ button { font: inherit; }
 
 .map-stage { position: relative; min-width: 0; height: 100%; }
 .map-canvas { width: 100%; height: 100%; background: #dce9dd; }
+.map-loading {
+  position: absolute;
+  z-index: 590;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 14px;
+  border: 1px solid rgba(219, 229, 223, .9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .92);
+  color: var(--muted);
+  box-shadow: var(--shadow);
+  font-size: .8rem;
+  transition: opacity .2s ease;
+}
+.map-loading.hidden { opacity: 0; pointer-events: none; }
 .leaflet-control-attribution { font-size: 10px; }
 .leaflet-popup-content { margin: 10px 12px; font-size: .78rem; }
 
@@ -138,6 +204,16 @@ button { font: inherit; }
 }
 .panel-section h2 { margin: 0; font-size: 1.2rem; line-height: 1.25; letter-spacing: 0; }
 .lead { margin: 10px 0 0; color: var(--muted); font-size: .86rem; }
+.area-badge {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--leaf);
+  border-radius: 4px;
+  background: #eef7ef;
+  color: var(--leaf-strong);
+  font-size: .74rem;
+  font-weight: 700;
+}
 
 .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
 .command-button {

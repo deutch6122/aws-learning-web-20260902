@@ -154,4 +154,4 @@ Expected results:
 
 The running map app uses browser geolocation. On the deployed domain, real-time
 current-location tracking requires HTTPS. Route creation can still be tested
-without HTTPS by using `地図中心をスタートにする` and `皇居周辺サンプル`.
+without HTTPS by using `地図中心をスタートにする` and `舎人公園サンプル`.

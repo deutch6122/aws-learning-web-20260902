@@ -9,13 +9,22 @@
     routeDistances: [],
     elevations: [],
     watchId: null,
+    lastTrackAt: 0,
+    lastTrackPoint: null,
     markers: {},
-    routeLayer: null
+    routeLayer: null,
+    tileLayer: null
   };
 
-  const ROUTE_THRESHOLD_METERS = 40;
-  const TOKYO_START = { lat: 35.681236, lng: 139.767125 };
-  const TOKYO_GOAL = { lat: 35.685175, lng: 139.752799 };
+  const NISHIARAI_CENTER = { lat: 35.77705, lng: 139.79067 };
+  const TONERI_PARK = { lat: 35.79655, lng: 139.77066 };
+  const SERVICE_AREA_RADIUS_METERS = 20000;
+  const MAX_ROUTE_DISTANCE_METERS = 25000;
+  const MAX_ELEVATION_SAMPLES = 40;
+  const ROUTE_THRESHOLD_METERS = 50;
+  const TRACK_MIN_INTERVAL_MS = 3000;
+  const TRACK_MIN_MOVE_METERS = 10;
+  const ROUTING_API_BASE = "https://routing.openstreetmap.de/routed-foot/route/v1/driving";
 
   const elements = {
     locate: document.getElementById("locate-button"),
@@ -34,6 +43,7 @@
     minElevation: document.getElementById("min-elevation"),
     maxElevation: document.getElementById("max-elevation"),
     canvas: document.getElementById("elevation-chart"),
+    mapLoading: document.getElementById("map-loading"),
     trackState: document.getElementById("track-state"),
     trackingCard: document.getElementById("tracking-card"),
     onRoute: document.getElementById("on-route-label"),
@@ -44,6 +54,16 @@
 
   function setStatus(message) {
     elements.status.textContent = message;
+  }
+
+  function isInServiceArea(point) {
+    return haversine(NISHIARAI_CENTER, point) <= SERVICE_AREA_RADIUS_METERS;
+  }
+
+  function validatePoint(point, label) {
+    if (isInServiceArea(point)) return true;
+    setStatus(`${label}は対象エリア外です。西新井駅から半径20km以内を指定してください。`);
+    return false;
   }
 
   function formatCoordinate(point) {
@@ -74,16 +94,20 @@
   }
 
   function setStart(point, moveMap = false) {
+    if (!validatePoint(point, "スタート地点")) return false;
     app.start = point;
     setMarker("start", point, "start-marker", "S");
     if (moveMap) app.map.setView(point, 15);
     syncControls();
+    return true;
   }
 
   function setGoal(point) {
+    if (!validatePoint(point, "目的地")) return false;
     app.goal = point;
     setMarker("goal", point, "goal-marker", "G");
     syncControls();
+    return true;
   }
 
   function haversine(a, b) {
@@ -105,7 +129,7 @@
     return distances;
   }
 
-  function sampleRoute(points, maxSamples = 90) {
+  function sampleRoute(points, maxSamples = MAX_ELEVATION_SAMPLES) {
     if (points.length <= maxSamples) return points;
     const distances = buildCumulativeDistances(points);
     const total = distances.at(-1);
@@ -237,13 +261,35 @@
     if (tileCache.has(url)) return tileCache.get(url);
     const promise = new Promise((resolve, reject) => {
       const image = new Image();
+      const timeoutId = window.setTimeout(() => reject(new Error("標高タイルの取得がタイムアウトしました")), 8000);
       image.crossOrigin = "anonymous";
-      image.onload = () => resolve(image);
-      image.onerror = reject;
+      image.onload = () => {
+        window.clearTimeout(timeoutId);
+        resolve(image);
+      };
+      image.onerror = () => {
+        window.clearTimeout(timeoutId);
+        reject(new Error("標高タイルを取得できませんでした"));
+      };
       image.src = url;
     });
     tileCache.set(url, promise);
     return promise;
+  }
+
+  async function fetchJson(url, timeoutMs) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error(`外部APIエラー (${response.status})`);
+      return await response.json();
+    } catch (error) {
+      if (error.name === "AbortError") throw new Error("外部APIの応答がタイムアウトしました");
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   }
 
   async function fetchGsiElevations(points) {
@@ -276,9 +322,10 @@
       const chunk = points.slice(index, index + chunkSize);
       const latitudes = chunk.map((point) => point.lat.toFixed(6)).join(",");
       const longitudes = chunk.map((point) => point.lng.toFixed(6)).join(",");
-      const response = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${latitudes}&longitude=${longitudes}`);
-      if (!response.ok) throw new Error(`Elevation API ${response.status}`);
-      const data = await response.json();
+      const data = await fetchJson(
+        `https://api.open-meteo.com/v1/elevation?latitude=${latitudes}&longitude=${longitudes}`,
+        15000
+      );
       elevations.push(...data.elevation);
     }
     return elevations;
@@ -302,15 +349,22 @@
     setStatus("ルートを作成中です。道路ネットワークと標高を取得しています。");
     try {
       const coordinates = `${app.start.lng},${app.start.lat};${app.goal.lng},${app.goal.lat}`;
-      const url = `https://router.project-osrm.org/route/v1/foot/${coordinates}?overview=full&geometries=geojson&steps=false`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Routing API ${response.status}`);
-      const data = await response.json();
+      const url = `${ROUTING_API_BASE}/${coordinates}?overview=full&geometries=geojson&steps=false`;
+      const data = await fetchJson(url, 20000);
       const route = data.routes?.[0];
       if (!route) throw new Error("Route not found");
 
-      app.route = route.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
-      app.routeDistances = buildCumulativeDistances(app.route);
+      const routePoints = route.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
+      const routeDistances = buildCumulativeDistances(routePoints);
+      const totalDistance = routeDistances.at(-1) || 0;
+      if (totalDistance > MAX_ROUTE_DISTANCE_METERS) {
+        throw new Error(`コースが${(totalDistance / 1000).toFixed(1)}kmあります。25km以内になるよう目的地を近づけてください`);
+      }
+      if (routePoints.some((point) => !isInServiceArea(point))) {
+        throw new Error("コースの一部が西新井駅から半径20kmの対象エリア外です");
+      }
+      app.route = routePoints;
+      app.routeDistances = routeDistances;
       if (app.routeLayer) app.routeLayer.remove();
       app.routeLayer = L.polyline(app.route, {
         color: "#247a4b",
@@ -363,6 +417,11 @@
   }
 
   function updateUserPosition(point) {
+    if (!isInServiceArea(point)) {
+      elements.trackState.textContent = "対象エリア外";
+      setStatus("現在地は西新井駅から半径20kmの対象エリア外です。");
+      return;
+    }
     setMarker("user", point, "user-marker", "●");
     const nearest = findNearestRoutePoint(point);
     const total = app.routeDistances.at(-1) || 1;
@@ -389,12 +448,20 @@
     if (app.watchId !== null) {
       navigator.geolocation.clearWatch(app.watchId);
       app.watchId = null;
+      app.lastTrackAt = 0;
+      app.lastTrackPoint = null;
       elements.track.textContent = "リアルタイム判定を開始";
       elements.trackState.textContent = "停止中";
       return;
     }
     app.watchId = navigator.geolocation.watchPosition((position) => {
       const point = { lat: position.coords.latitude, lng: position.coords.longitude };
+      const now = Date.now();
+      const elapsed = now - app.lastTrackAt;
+      const moved = app.lastTrackPoint ? haversine(app.lastTrackPoint, point) : Infinity;
+      if (elapsed < TRACK_MIN_INTERVAL_MS && moved < TRACK_MIN_MOVE_METERS) return;
+      app.lastTrackAt = now;
+      app.lastTrackPoint = point;
       updateUserPosition(point);
       elements.trackState.textContent = "判定中";
     }, (error) => {
@@ -421,8 +488,9 @@
     setStatus("現在地を取得しています。");
     navigator.geolocation.getCurrentPosition((position) => {
       const point = { lat: position.coords.latitude, lng: position.coords.longitude };
-      setStart(point, true);
-      setStatus("現在地をスタートに設定しました。目的地を地図上でクリックしてください。");
+      if (setStart(point, true)) {
+        setStatus("現在地をスタートに設定しました。目的地を地図上でクリックしてください。");
+      }
     }, (error) => {
       setStatus(`現在地を取得できません: ${error.message}`);
     }, {
@@ -437,38 +505,57 @@
       setStatus("地図ライブラリを読み込めませんでした。ネットワーク接続を確認してください。");
       return;
     }
+    const serviceAreaBounds = L.latLngBounds(
+      [35.5970, 139.5680],
+      [35.9570, 140.0135]
+    );
     app.map = L.map("map", {
       zoomControl: false,
-      preferCanvas: true
-    }).setView([35.681236, 139.767125], 13);
+      preferCanvas: true,
+      minZoom: 11,
+      maxBounds: serviceAreaBounds,
+      maxBoundsViscosity: 1
+    }).setView(NISHIARAI_CENTER, 12);
     L.control.zoom({ position: "bottomleft" }).addTo(app.map);
-    L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", {
+    app.tileLayer = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", {
       maxZoom: 18,
+      keepBuffer: 1,
+      updateWhenIdle: true,
+      updateWhenZooming: false,
       attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>'
     }).addTo(app.map);
+    app.tileLayer.once("load", () => elements.mapLoading.classList.add("hidden"));
+    window.setTimeout(() => {
+      app.map.invalidateSize({ pan: false });
+    }, 250);
+    window.setTimeout(() => app.map.invalidateSize({ pan: false }), 900);
+    window.setTimeout(() => elements.mapLoading.classList.add("hidden"), 4000);
     app.map.on("click", (event) => {
-      setGoal({ lat: event.latlng.lat, lng: event.latlng.lng });
-      setStatus("目的地を設定しました。スタート地点を設定してコースを作成してください。");
+      if (setGoal({ lat: event.latlng.lat, lng: event.latlng.lng })) {
+        setStatus("目的地を設定しました。コースを作成できます。");
+      }
     });
+    setStart(NISHIARAI_CENTER);
   }
 
   elements.locate.addEventListener("click", locateUser);
   elements.useCenter.addEventListener("click", () => {
     const center = app.map.getCenter();
-    setStart({ lat: center.lat, lng: center.lng });
-    setStatus("地図中心をスタート地点に設定しました。目的地をクリックしてください。");
+    if (setStart({ lat: center.lat, lng: center.lng })) {
+      setStatus("地図中心をスタート地点に設定しました。目的地をクリックしてください。");
+    }
   });
   elements.sample.addEventListener("click", () => {
-    setStart(TOKYO_START, true);
-    setGoal(TOKYO_GOAL);
-    setStatus("皇居周辺のサンプル地点を設定しました。コースを作成できます。");
+    setStart(NISHIARAI_CENTER, true);
+    setGoal(TONERI_PARK);
+    setStatus("西新井駅付近から舎人公園までのサンプル地点を設定しました。コースを作成できます。");
   });
   elements.build.addEventListener("click", buildRoute);
   elements.track.addEventListener("click", startTracking);
 
   window.addEventListener("resize", () => {
     if (app.elevations.length) drawElevationChart(app.elevations);
-    app.map?.invalidateSize();
+    app.map?.invalidateSize({ pan: false });
   });
 
   initMap();

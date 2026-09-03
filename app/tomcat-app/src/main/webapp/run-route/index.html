@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="現在地と目的地からランニングコースを作成し、高低差とコース上の現在位置を確認する日本国内向け地図アプリです。">
+  <meta name="description" content="東京都足立区西新井周辺で、現在地と目的地からランニングコースを作成し、高低差とコース上の現在位置を確認する地図アプリです。">
   <title>RunRoute Japan</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://cyberjapandata.gsi.go.jp">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQG9OKyk9iawVLwIYd9MNw3QfErHs=" crossorigin="">
   <link rel="stylesheet" href="styles.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
@@ -16,18 +18,19 @@
   <main class="app-shell">
     <section class="map-stage" aria-label="ランニングコース地図">
       <div id="map" class="map-canvas"></div>
+      <div id="map-loading" class="map-loading" role="status">西新井周辺の地図を読み込み中...</div>
       <div class="map-overlay top">
         <div class="brand-block">
           <span class="brand-mark">RUN</span>
           <div>
             <h1>RunRoute Japan</h1>
-            <p>現在地から、実際の道をたどるランニングコースと高低差を確認します。</p>
+            <p>西新井周辺20kmで、走れる道と高低差を確認します。</p>
           </div>
         </div>
         <button id="locate-button" class="icon-button" type="button" title="現在地を取得" aria-label="現在地を取得">◎</button>
       </div>
       <div class="map-overlay bottom">
-        <p id="status-message">地図をクリックして目的地を指定してください。現在地取得にはHTTPSが必要です。</p>
+        <p id="status-message">西新井駅付近をスタートに設定しました。地図をクリックして目的地を指定してください。</p>
       </div>
     </section>
 
@@ -35,11 +38,13 @@
       <section class="panel-section controls">
         <p class="eyebrow">COURSE BUILDER</p>
         <h2>走れる道でコース作成</h2>
-        <p class="lead">現在地を取得してから地図上の目的地をクリックし、徒歩向け道路ネットワークで経路を引きます。</p>
+        <p class="lead">西新井周辺20kmを対象に、現在地または地図中心から徒歩向け道路ネットワークで経路を引きます。</p>
+
+        <div class="area-badge" aria-label="利用範囲">対象エリア：西新井駅から半径20km／最大コース25km</div>
 
         <div class="control-grid">
           <button id="use-center-button" class="command-button secondary" type="button">地図中心をスタートにする</button>
-          <button id="sample-button" class="command-button secondary" type="button">皇居周辺サンプル</button>
+          <button id="sample-button" class="command-button secondary" type="button">舎人公園サンプル</button>
         </div>
         <button id="build-route-button" class="command-button primary" type="button" disabled>コースを作成</button>
         <button id="track-button" class="command-button ghost" type="button" disabled>リアルタイム判定を開始</button>
@@ -103,7 +108,8 @@
       <section class="panel-section notes">
         <h2>利用上のポイント</h2>
         <ul>
-          <li>経路はOpenStreetMapベースのOSRM徒歩ルートを使います。私有地、通行止め、夜間閉鎖、階段、混雑などは現地状況を優先してください。</li>
+          <li>対象範囲は西新井駅から半径20km、作成するコースは最大25kmです。</li>
+          <li>経路はOpenStreetMapベースの徒歩向けOSRMルートを使います。私有地、通行止め、夜間閉鎖、階段、混雑などは現地状況を優先してください。</li>
           <li>現在地のリアルタイム判定はブラウザの位置情報APIを使います。公開環境ではHTTPS化が必要です。</li>
           <li>標高は国土地理院DEMを優先し、取得できない場合はOpen-MeteoのCopernicus DEM GLO-90標高APIへ切り替えます。</li>
           <li>外部APIの公開エンドポイントは学習・試作用です。継続運用する場合は利用規約、制限、商用利用条件を確認し、必要に応じて契約APIへ置き換えてください。</li>
