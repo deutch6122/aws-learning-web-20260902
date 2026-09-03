@@ -1,130 +1,170 @@
-# RunRoute Japan Web App
+# ランニングコース地図アプリ 設計・運用メモ
 
-## Overview
+## このドキュメントの目的
 
-RunRoute Japan is a browser-based running route map application included in the
-Tomcat `ROOT.war` static front end. It creates a runnable course from a start
-point to a destination, shows the route elevation profile, and checks whether
-the user's current location is near the generated course. The current version
-is optimized for personal use within 20 km of Nishi-Arai, Adachi-ku, Tokyo.
+このドキュメントは、`/run-route/` で動作するランニングコース地図アプリの構成、処理の流れ、制約、デプロイ後の確認方法をまとめたものです。
 
-The current implementation is designed as a learning/prototype application. It
-does not store user location data on the server.
+対象読者は、Linux や Web サーバの基本操作は分かるが、地図 API、ルート生成、高低差取得、ブラウザ位置情報の組み合わせをこれから学ぶ人を想定しています。
 
-## Main Features
+このアプリは学習・個人利用向けのプロトタイプです。サーバ側に現在地情報や作成したルートを保存しません。
 
-- Map display using Leaflet and GSI map tiles, centered on Nishi-Arai.
-- Start, goal, and route validation within a 20 km radius of Nishi-Arai.
-- Maximum generated course distance of 25 km.
-- Destination selection by clicking the map.
-- Start point selection from browser geolocation or the current map center.
-- Walking/running route generation using a walking-profile OSRM service.
-- Elevation profile using GSI DEM tiles first, with Open-Meteo elevation API as
-  a fallback.
-- Route metrics:
-  - distance
-  - elevation gain
-  - elevation loss
-  - elevation range
-- Real-time on-route check using browser geolocation `watchPosition`.
+## アプリの概要
 
-## Files
+`RunRoute Japan` は、既存の Tomcat `ROOT.war` の中に含まれる静的 Web アプリです。
 
-| File | Role |
+主な目的は次の3つです。
+
+- 地図上でスタート地点と目的地を指定し、実際の道路に沿ったランニング向けルートを作成する
+- 作成されたルートの距離と高低差を分かりやすく表示する
+- ブラウザの現在地情報を使い、自分がコース付近にいるか判定する
+
+現在の実装では、個人利用を前提に `東京都足立区 西新井周辺から半径20km程度` の範囲に最適化しています。
+
+## 主な機能
+
+| 機能 | 内容 |
 | --- | --- |
-| `app/tomcat-app/src/main/webapp/run-route/index.html` | Main UI and app layout |
-| `app/tomcat-app/src/main/webapp/run-route/styles.css` | Map-focused responsive design |
-| `app/tomcat-app/src/main/webapp/run-route/app.js` | Map, route, elevation, and tracking logic |
-| `app/tomcat-app/src/main/java/com/example/learning/HomeServlet.java` | Existing API remains available, but is not required by this app |
+| 地図表示 | Leaflet と国土地理院地図タイルを使って地図を表示します |
+| 利用範囲制限 | 西新井周辺を中心に半径20km程度の範囲で利用する想定です |
+| スタート地点設定 | ブラウザの現在地、または地図中心をスタート地点にできます |
+| 目的地設定 | 地図をクリックしてゴール地点を設定します |
+| ルート作成 | OSRM 系の徒歩ルーティングサービスで道路沿いのコースを作成します |
+| 高低差表示 | 国土地理院 DEM タイルを優先し、取得できない場合は Open-Meteo Elevation API を使います |
+| リアルタイム判定 | ブラウザの位置情報を監視し、コース上にいるかを判定します |
+| 軽量化 | 表示範囲、ズーム、標高サンプル数、位置情報更新頻度を抑えています |
 
-## Runtime Flow
+## 関連ファイル
 
-1. The browser loads `index.html`, `styles.css`, `app.js`, and Leaflet.
-2. Leaflet displays GSI standard map tiles.
-3. The user sets the start point:
-   - click the location button to use browser geolocation, or
-   - click `地図中心をスタートにする`.
-4. The user clicks the map to set the goal.
-5. `app.js` calls the FOSSGIS walking-profile OSRM service:
-   - `https://routing.openstreetmap.de/routed-foot/route/v1/driving/{lng,lat};{lng,lat}`
-   - `overview=full`
-   - `geometries=geojson`
-6. The returned route geometry is drawn as a line on the map.
-7. The route is sampled to at most 40 points to reduce browser and API load.
-8. Elevation is calculated:
-   - first by reading GSI `dem_png` tiles in the browser,
-   - then by falling back to Open-Meteo `/v1/elevation` if needed.
-9. The app calculates distance, ascent, descent, and elevation range.
-10. If real-time tracking is started, the app watches browser geolocation and
-    calculates the nearest route segment.
+| ファイル | 役割 |
+| --- | --- |
+| `app/tomcat-app/src/main/webapp/run-route/index.html` | 画面レイアウトと読み込み定義 |
+| `app/tomcat-app/src/main/webapp/run-route/styles.css` | 地図画面、サイドパネル、スマホ表示などのデザイン |
+| `app/tomcat-app/src/main/webapp/run-route/app.js` | 地図表示、ルート作成、標高取得、現在地判定の本体処理 |
+| `app/tomcat-app/src/main/java/com/example/learning/HomeServlet.java` | 既存のステータス API。地図アプリ本体では必須ではありません |
 
-## HTTPS Requirement
+## 画面表示までの流れ
 
-Browser geolocation requires a secure context in modern browsers. For this
-project, that means:
+1. ブラウザで `/run-route/` を開きます。
+2. `index.html` が読み込まれます。
+3. `styles.css` と `app.js` が読み込まれます。
+4. Leaflet が地図表示用の処理を初期化します。
+5. 国土地理院の地図タイルを読み込み、地図を表示します。
+6. 初期表示位置は西新井周辺になります。
 
-- local development can use `http://localhost` or `http://127.0.0.1`;
-- the deployed ALB/domain should use HTTPS for real current-location tracking.
+過去に画面上で地図タイルがばらばらに表示されたことがありました。これは Leaflet の CSS 読み込みが遅い、または失敗した場合に起きやすい現象です。現在は最低限必要な Leaflet 用 CSS をアプリ側にも持たせ、表示崩れを起こしにくくしています。
 
-If the app is deployed only on HTTP, route creation still works with the manual
-start point button, but current-location retrieval and real-time tracking will
-not work reliably.
+## ルート作成の流れ
 
-## Route Judgment
+1. ユーザーがスタート地点を設定します。
+2. ユーザーが地図上をクリックしてゴール地点を設定します。
+3. スタート地点とゴール地点が西新井周辺20km圏内か確認します。
+4. OSRM 系の徒歩ルーティングサービスへ問い合わせます。
+5. 返ってきたルート形状を地図上に線で描画します。
+6. ルート全体の距離を計算します。
+7. 距離が長すぎる場合は、学習・個人利用の範囲外としてエラー表示します。
 
-The app treats the user as being on the course when the nearest route segment is
-within `50m`.
+現在利用しているルーティング先は次の形式です。
 
-This value is defined in `app.js`:
+```text
+https://routing.openstreetmap.de/routed-foot/route/v1/driving/{経度,緯度};{経度,緯度}
+```
+
+URL に `driving` という文字が含まれますが、接続先が `routed-foot` のため徒歩向けプロファイルで処理されます。これは OSRM 互換 API の URL 形式によるものです。
+
+## 高低差取得の流れ
+
+高低差は、ルート上のすべての点を細かく調べると重くなるため、最大40点程度に間引いて取得します。
+
+処理の優先順位は次の通りです。
+
+1. 国土地理院の DEM タイルから標高を取得する
+2. 取得できない点がある場合、Open-Meteo Elevation API で補完する
+3. 取得した標高から、上り累積、下り累積、標高差を計算する
+
+表示する値は次の4つです。
+
+| 項目 | 内容 |
+| --- | --- |
+| 距離 | 作成されたルート全体の距離 |
+| 上り累積 | ルート上で上った高さの合計 |
+| 下り累積 | ルート上で下った高さの合計 |
+| 標高差 | ルート中の最高地点と最低地点の差 |
+
+## 現在地判定の流れ
+
+リアルタイム判定を開始すると、ブラウザの `watchPosition` を使って現在地を取得します。
+
+取得した現在地から、作成済みルートの線分までの最短距離を計算し、現在は `50m以内` であればコース上にいると判定します。
+
+判定しきい値は `app.js` にあります。
 
 ```js
 const ROUTE_THRESHOLD_METERS = 50;
 ```
 
-For dense city areas, a smaller threshold may be useful. For GPS noise, tall
-buildings, parks, and riverside paths, a larger threshold may be less noisy.
+都市部ではビルや高架、地下道、川沿いなどで GPS がぶれます。そのため、厳密にしすぎると「コース外」と判定されやすくなります。逆に広すぎると、隣の道でもコース上と判定される可能性があります。
 
-## Performance Measures
+## HTTPS が必要な理由
 
-- Leaflet's essential tile-positioning CSS is included in the application CSS,
-  preventing a slow external stylesheet from scattering map tiles.
-- The initial zoom is limited to the Nishi-Arai service area and map panning is
-  bounded to the surrounding 20 km area.
-- Map tiles update after movement settles and only one surrounding tile buffer
-  is retained.
-- Elevation sampling is limited to 40 points.
-- Route and elevation API requests have timeouts so a slow external service does
-  not leave the screen waiting indefinitely.
-- Real-time tracking UI updates are throttled to at most once every three
-  seconds unless the device has moved at least 10 m.
-- Map size is recalculated after initial layout and window resizing.
+ブラウザの現在地取得は、現在の主要ブラウザではセキュアな通信環境が必要です。
 
-## Prototype Limitations
+動作条件は次のようになります。
 
-- OSRM public endpoints are suitable for learning and prototypes, not guaranteed
-  production service.
-- The `foot` route follows the available OpenStreetMap routing graph; it does
-  not know all local running preferences.
-- Elevation is terrain elevation, not bridge, overpass, building, or tunnel
-  elevation.
-- The app does not yet support named place search, GPX export, saved routes, or
-  multi-waypoint course planning.
+| 環境 | 現在地取得 |
+| --- | --- |
+| `http://localhost` | 利用可能 |
+| `http://127.0.0.1` | 利用可能 |
+| `http://app.filanza-aws.com` | ブラウザによって制限される可能性が高い |
+| `https://app.filanza-aws.com` | 利用可能 |
 
-## Production Improvement Ideas
+HTTP のままでも、地図中心をスタート地点にしてルート作成を試すことはできます。ただし、実際の現在地取得やリアルタイム判定を安定して使うには HTTPS 化が必要です。
 
-- Use a contracted routing provider or self-host OSRM/Valhalla/GraphHopper.
-- Add place search for Japanese addresses and landmarks.
-- Add waypoint editing for round-trip running routes.
-- Add GPX export/import.
-- Add route safety hints such as major-road avoidance and park/path preference.
-- Add HTTPS with ACM so geolocation works on the deployed domain.
-- Add monitoring for external API failures.
+## 軽量化のために入れている工夫
 
-## Deployment
+今回のアプリは、自分だけが使い、西新井周辺20km程度で使えればよいという前提で軽量化しています。
 
-The app is included in the existing Maven WAR build.
+| 改善点 | 内容 |
+| --- | --- |
+| 初期表示範囲の固定 | 日本全国ではなく、西新井周辺を初期表示します |
+| 表示範囲の制限 | 地図を遠くまで移動しすぎないようにしています |
+| ズーム範囲の制限 | 不要な広域表示や過剰な拡大を避けています |
+| タイル保持数の削減 | 余分な地図タイルを持ちすぎないようにしています |
+| 標高サンプル数の削減 | 高低差取得を最大40点程度に抑えています |
+| API タイムアウト | 外部 API が遅い場合に待ち続けないようにしています |
+| 現在地更新の間引き | 3秒以内、または移動距離10m未満の更新を抑えています |
+| Leaflet CSS 補強 | CSS 読み込み遅延時の地図崩れを抑えています |
 
-Normal deployment flow:
+## 現在の制約
+
+このアプリは学習・個人利用向けのため、商用サービスのような完全性は持たせていません。
+
+- ルート検索は外部の公開サービスに依存します
+- 公開ルーティングサービスは本番商用利用向けの保証がありません
+- OpenStreetMap 側に道路情報がない場所は正しくルート化できません
+- 「走りやすい道」「信号が少ない道」「夜でも安全な道」までは判断していません
+- 高低差は地形標高であり、橋、歩道橋、高架、地下道の実際の上下移動とはずれることがあります
+- 現在地判定は GPS 精度の影響を受けます
+- 住所検索、保存機能、ログイン機能、GPX 出力は未実装です
+
+## 本番化する場合の改善案
+
+学習用途を超えて長く使うなら、次の改善が候補になります。
+
+- ACM と ALB HTTPS リスナーを使って HTTPS 化する
+- OSRM、Valhalla、GraphHopper などを自前でホストする
+- 日本語住所検索やランドマーク検索を追加する
+- 経由地を複数指定できるようにする
+- 周回コース作成機能を追加する
+- GPX エクスポート、インポートを追加する
+- 過去に作成したコースを保存できるようにする
+- 幹線道路回避、公園優先、河川敷優先などの条件指定を追加する
+- 外部 API 失敗時の監視やエラー通知を追加する
+
+## デプロイ方法
+
+このアプリは既存の Maven ビルドで `ROOT.war` に含まれます。
+
+通常の反映手順は次の通りです。
 
 ```bash
 git add app/tomcat-app/src/main/webapp/run-route docs/running-route-map-app.md
@@ -132,10 +172,11 @@ git commit -m "Optimize running map for Nishi-Arai"
 git push origin main
 ```
 
-After GitHub push, CodePipeline builds the WAR and CodeDeploy replaces the
-application files on the EC2/Tomcat environment.
+GitHub に push すると、CodePipeline が起動し、CodeBuild で WAR が作成され、CodeDeploy で EC2/Tomcat 環境へ配置されます。
 
-## Post-Deploy Checks
+## デプロイ後の確認
+
+まず、HTML、CSS、JavaScript がそれぞれ正しいパスで返ることを確認します。
 
 ```bash
 curl -I http://app.filanza-aws.com/run-route/
@@ -143,13 +184,20 @@ curl -I http://app.filanza-aws.com/run-route/styles.css
 curl -I http://app.filanza-aws.com/run-route/app.js
 ```
 
-Expected content types:
+期待する結果は次の通りです。
 
-- `/run-route/` returns `text/html`
-- `/run-route/styles.css` returns `text/css`
-- `/run-route/app.js` returns JavaScript content
+| URL | 期待する結果 |
+| --- | --- |
+| `/run-route/` | `200` が返る |
+| `/run-route/styles.css` | `Content-Type: text/css` が返る |
+| `/run-route/app.js` | JavaScript として返る |
 
-Open the site in a browser, click `舎人公園サンプル`, then click
-`コースを作成`.
+ブラウザでは次を確認します。
 
-For real-time tracking, complete HTTPS setup first.
+1. `http://app.filanza-aws.com/run-route/` を開く
+2. 地図が崩れずに表示されることを確認する
+3. `舎人公園サンプル` をクリックする
+4. `コースを作成` をクリックする
+5. ルート線、距離、高低差が表示されることを確認する
+
+現在地取得とリアルタイム判定を本格的に確認する場合は、先に HTTPS 化してください。
