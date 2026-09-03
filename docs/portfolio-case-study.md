@@ -99,7 +99,7 @@ RDS seed data: 2 records
 | SSM Patch Baseline 作成失敗 | baseline 名が `aws-` で始まり AWS 予約名扱いになった | `custom-` prefix を付与 |
 | Wait stage が失敗 | CodeBuild 環境で `aws autoscaling wait group-in-service` が利用できなかった | `describe-auto-scaling-groups` による明示的な polling に変更 |
 | Java アプリの DB 接続失敗 | JDBC driver が `DriverManager` から見つからなかった | `Class.forName("com.mysql.cj.jdbc.Driver")` を追加 |
-| CSS が反映されない | Servlet の `/` mapping が `/styles.css` も処理していた | root mapping を `""` に変更し、静的ファイルは Tomcat default servlet で配信 |
+| CSS が反映されない | Servlet mappingにより `/styles.css` へHTMLが返っていた | 教材を静的resource、動的処理を `/api/status` に分離し、Tomcat default servletでCSSを配信 |
 | CodeDeploy AfterInstall が失敗 | hook 実行時に RDS 接続が一時的に timeout | `check_db.py` と `seed_db.py` に retry wrapper を追加 |
 
 ## 学んだこと
@@ -128,4 +128,3 @@ RDS seed data: 2 records
 詳細な構築手順は root の `README.md` を参照してください。初回のみ local から bootstrap を適用し、その後は GitHub push を起点に CodePipeline で infra と application を更新します。
 
 削除は `infra` を先に destroy し、最後に `bootstrap` を destroy します。ALB, NAT Gateway, RDS は起動中に費用が発生するため、学習後は削除まで実施します。
-

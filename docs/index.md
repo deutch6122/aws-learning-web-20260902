@@ -102,6 +102,7 @@ GitHub main push
 | [Portfolio Case Study](./portfolio-case-study.md) | プロジェクトの目的、成果、CI/CD、課題解決、学び |
 | [Architecture](./architecture.md) | ネットワーク、通信経路、監視、パッチ、セキュリティ |
 | [Application and Database Design](./application-database-design.md) | AP–DB接続、Secret取得、SQL、初期データ、障害時の動作 |
+| [Web Application Replacement Guide](./web-application-replacement-guide.md) | 教材HTML・CSS・JavaScript・WARの差し替え、検証、デプロイ、rollback |
 | [Operations](./operations.md) | 構築後確認、監視、デプロイ、障害調査、削除 |
 | [Publish Checklist](./publish-checklist.md) | 機密情報や公開設定の確認項目 |
 

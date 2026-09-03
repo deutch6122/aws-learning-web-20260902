@@ -48,8 +48,9 @@ Secrets Manager APIへの通信は、現在の設定ではprivate App subnetか�
 | --- | --- |
 | ALB | 外部リクエストの受け付け、EC2への振り分け、`/health` によるtarget health確認 |
 | Apache | ポート80で受信し、`/health` を静的応答。それ以外をlocalhostのTomcat:8080へreverse proxy |
-| Tomcat | `ROOT.war` を実行し、Servletへリクエストを渡す |
-| `HomeServlet` | Secret取得、MySQL接続、`messages` 参照、HTML生成、アプリログ出力 |
+| Tomcat | `ROOT.war` を実行し、静的教材とServlet APIを配信する |
+| `index.html` / `app.js` | 教材本文・問題を表示し、`/api/status` のJSONを安全にDOMへ反映する |
+| `HomeServlet` | Secret取得、MySQL接続、`messages` 参照、JSON応答、アプリログ出力 |
 | Secrets Manager | RDS接続先、database名、username、passwordをJSONで保管 |
 | EC2 IAM Role | 対象Secret ARNに限って `secretsmanager:GetSecretValue` を許可 |
 | RDS MySQL | `appdb.messages` の永続化と検索 |
@@ -158,7 +159,14 @@ Secretを取得するAWS API通信のauthorizationと、取得後にMySQLへ接�
 
 ### 7.1 対象URL
 
-`HomeServlet` はcontext rootと `/app` にmappingされています。`/styles.css` などのstatic resourceはDefaultServletに処理させます。
+TomcatのDefaultServletがcontext rootの `index.html`、`styles.css`、`app.js` を配信します。`HomeServlet` は `/api/status` だけにmappingし、画面が必要とする稼働情報をJSONで返します。
+
+| Path | 処理 | DB依存 |
+| --- | --- | --- |
+| `/` | `index.html` を配信 | なし |
+| `/styles.css`、`/app.js` | 静的resourceを配信 | なし |
+| `/api/status` | `HomeServlet` がJSONを返却 | あり |
+| `/health` | Apacheが静的な `OK` を返却 | なし |
 
 ### 7.2 処理sequence
 
@@ -167,11 +175,18 @@ sequenceDiagram
   actor User
   participant ALB
   participant Apache
-  participant Servlet as HomeServlet
+  participant Static as index.html / app.js
+  participant Servlet as HomeServlet API
   participant SM as Secrets Manager
   participant RDS as RDS MySQL
 
   User->>ALB: GET /
+  ALB->>Apache: HTTP :80
+  Apache->>Static: Proxy to localhost:8080
+  Static-->>Apache: 教材HTML/CSS/JavaScript
+  Apache-->>ALB: HTTP 200
+  ALB-->>User: 教材HTML/CSS/JavaScript
+  User->>ALB: GET /api/status
   ALB->>Apache: HTTP :80
   Apache->>Servlet: Proxy to localhost:8080
   Servlet->>SM: GetSecretValue(Secret ARN)
@@ -180,24 +195,27 @@ sequenceDiagram
   Servlet->>RDS: JDBC connect(host:3306/appdb)
   Servlet->>RDS: SELECT title, body, created_at<br/>FROM messages ORDER BY id
   RDS-->>Servlet: ResultSet
-  Servlet->>Servlet: HTML escape、画面生成、成功log
-  Servlet-->>Apache: HTTP 200 / HTML
-  Apache-->>ALB: HTTP 200
-  ALB-->>User: HTML response
+  Servlet->>Servlet: JSON payload生成、成功log
+  Servlet-->>Apache: HTTP 200 / JSON
+  Apache-->>ALB: HTTP 200 / JSON
+  ALB-->>User: HTTP 200 / JSON
+  User->>User: textContentでstatusとmessageを描画
 ```
 
 ### 7.3 詳細処理
 
-1. Servletはリクエストごとに空のmessage listと初期status `Not checked` を作成します。
-2. Java system property `db.secret.arn` を優先し、未設定時はenvironment variable `DB_SECRET_ARN` を参照します。
-3. `aws.region` を優先し、未設定時は `AWS_REGION`、それもなければ `ap-northeast-1` を使用します。
-4. AWS SDK for Javaで `GetSecretValue` を実行し、Secret stringをJSONとしてparseします。
-5. `host`、`port`、`dbname` からJDBC URLを組み立てます。
-6. `Class.forName("com.mysql.cj.jdbc.Driver")` でMySQL JDBC driverを明示的にloadします。
-7. Secretのusername/passwordでMySQL connectionを確立します。
-8. 固定SQLで `messages` tableの全行をID昇順に取得します。
-9. title、body、created_atをHTML escapeして画面へ出力します。
-10. connection、statement、result setはtry-with-resourcesでcloseします。
+1. Browserは静的な教材画面を表示し、JavaScriptから同一originの `/api/status` を呼び出します。
+2. Servletはリクエストごとに空のmessage listと初期status `Not checked` を作成します。
+3. Java system property `db.secret.arn` を優先し、未設定時はenvironment variable `DB_SECRET_ARN` を参照します。
+4. `aws.region` を優先し、未設定時は `AWS_REGION`、それもなければ `ap-northeast-1` を使用します。
+5. AWS SDK for Javaで `GetSecretValue` を実行し、Secret stringをJSONとしてparseします。
+6. `host`、`port`、`dbname` からJDBC URLを組み立てます。
+7. `Class.forName("com.mysql.cj.jdbc.Driver")` でMySQL JDBC driverを明示的にloadします。
+8. Secretのusername/passwordでMySQL connectionを確立します。
+9. 固定SQLで `messages` tableの全行をID昇順に取得します。
+10. status、masked instance ID、Availability Zone、application version、message listをJSONとして返します。Secret valueやdatabase host、完全なinstance IDは含めません。
+11. Browserは受け取った文字列を `innerHTML` ではなく `textContent` で描画します。
+12. connection、statement、result setはtry-with-resourcesでcloseします。
 
 現在のJDBC URLは次の形式です。
 
@@ -209,13 +227,13 @@ jdbc:mysql://<host>:<port>/<dbname>?useSSL=true&requireSSL=false&serverTimezone=
 
 ### 7.4 DB接続失敗時
 
-Secret取得、JSON parse、JDBC driver load、DNS、network、database authentication、SQL実行のいずれかで例外が発生した場合、Servletは例外class名だけを画面へ表示します。
+Secret取得、JSON parse、JDBC driver load、DNS、network、database authentication、SQL実行のいずれかで例外が発生した場合、Servletは例外class名だけを `dbStatus` に設定します。
 
 ```text
 Connection failed: <ExceptionClass>
 ```
 
-stack traceはTomcat logへ、簡略化したeventは `/var/log/aws-learning-web/app.log` へ出力します。passwordやSecret JSONは出力しません。ページ自体はHTTP 200で返し、message欄は空になります。
+stack traceはTomcat logへ、簡略化したeventは `/var/log/aws-learning-web/app.log` へ出力します。passwordやSecret JSONは出力しません。APIは状態を含むJSONをHTTP 200で返し、message欄は空になります。API自体へ接続できない場合も、静的な教材本文と問題は利用できます。
 
 ## 8. DB疎通確認処理
 
@@ -378,7 +396,8 @@ sudo bash -lc 'set -a; source /etc/aws-learning-web.env; set +a; python3 /opt/aw
 
 | 設計項目 | 実装file |
 | --- | --- |
-| ServletのSecret取得・SQL・画面表示 | `app/tomcat-app/src/main/java/com/example/learning/HomeServlet.java` |
+| ServletのSecret取得・SQL・JSON応答 | `app/tomcat-app/src/main/java/com/example/learning/HomeServlet.java` |
+| 教材画面・status描画 | `app/tomcat-app/src/main/webapp/index.html`、`styles.css`、`app.js` |
 | Java dependencies | `app/tomcat-app/pom.xml` |
 | DB疎通確認 | `app/scripts/check_db.py` |
 | Table作成・seed | `app/scripts/seed_db.py` |
