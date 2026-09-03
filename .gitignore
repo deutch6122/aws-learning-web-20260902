@@ -3,6 +3,7 @@
 *.tfstate.*
 *.tfplan
 terraform.tfvars
+pipeline.auto.tfvars
 target/
 package/
 .DS_Store
