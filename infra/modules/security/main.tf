@@ -77,13 +77,7 @@ resource "aws_security_group" "db" {
   name        = "${var.project_name}-db-sg${var.name_suffix_physical}"
   description = "MySQL only from application"
   vpc_id      = var.vpc_id
-  ingress {
-    description     = "MySQL from app"
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.app.id]
-  }
+
   tags = {
     Name = "${var.project_name}-db-sg${var.name_suffix_tag}"
   }
@@ -96,4 +90,13 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_app_http" {
   to_port                      = 80
   ip_protocol                  = "tcp"
   description                  = "ALB to Apache"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "db_from_app" {
+  security_group_id            = aws_security_group.db.id
+  referenced_security_group_id = aws_security_group.app.id
+  from_port                    = 3306
+  to_port                      = 3306
+  ip_protocol                  = "tcp"
+  description                  = "MySQL from app"
 }
