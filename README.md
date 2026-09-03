@@ -17,7 +17,7 @@ EC2 -> Secrets Manager / CloudWatch / SSM / CodeDeploy
 Alarm -> SNS Email; SNS -> AWS Chatbot or User Notifications -> Slack (manual connection)
 ```
 
-詳細は [docs/architecture.md](docs/architecture.md)、[docs/application-database-design.md](docs/application-database-design.md)、[docs/operations.md](docs/operations.md) を参照してください。AP–DB詳細設計には、接続経路、Secret/IAM認証、Web参照、DB初期化、障害時の挙動をまとめています。教材画面の変更方法は [docs/web-application-replacement-guide.md](docs/web-application-replacement-guide.md) にまとめています。
+詳細は [docs/architecture.md](docs/architecture.md)、[docs/application-database-design.md](docs/application-database-design.md)、[docs/operations.md](docs/operations.md) を参照してください。AP–DB詳細設計には、接続経路、Secret/IAM認証、Web参照、DB初期化、障害時の挙動をまとめています。教材画面の変更方法は [docs/web-application-replacement-guide.md](docs/web-application-replacement-guide.md) にまとめています。現在はトップページから、AWS教材アプリとランニングコース地図アプリの2つを選択できます。複数アプリの配置方法は [docs/multi-web-app-routing-guide.md](docs/multi-web-app-routing-guide.md)、地図アプリの詳細は [docs/running-route-map-app.md](docs/running-route-map-app.md) を参照してください。
 
 ポートフォリオ公開用の叩き台は [docs/portfolio-case-study.md](docs/portfolio-case-study.md)、公開前チェックは [docs/publish-checklist.md](docs/publish-checklist.md) を参照してください。
 

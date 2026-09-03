@@ -103,6 +103,8 @@ GitHub main push
 | [Architecture](./architecture.md) | ネットワーク、通信経路、監視、パッチ、セキュリティ |
 | [Application and Database Design](./application-database-design.md) | AP–DB接続、Secret取得、SQL、初期データ、障害時の動作 |
 | [Web Application Replacement Guide](./web-application-replacement-guide.md) | 教材HTML・CSS・JavaScript・WARの差し替え、検証、デプロイ、rollback |
+| [Multi Web App Routing Guide](./multi-web-app-routing-guide.md) | 1つのTomcat/WARで複数WebアプリをURLパスごとに動かす方法 |
+| [RunRoute Japan Web App](./running-route-map-app.md) | ランニングコース地図アプリの機能、API構成、HTTPS要件、デプロイ手順 |
 | [Operations](./operations.md) | 構築後確認、監視、デプロイ、障害調査、削除 |
 | [Publish Checklist](./publish-checklist.md) | 機密情報や公開設定の確認項目 |
 

@@ -121,7 +121,7 @@
     const dot = document.querySelector(".status-dot");
     const dbCard = document.getElementById("db-status-card");
     try {
-      const response = await fetch("api/status", { headers: { Accept: "application/json" }, cache: "no-store" });
+      const response = await fetch("/api/status", { headers: { Accept: "application/json" }, cache: "no-store" });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setText("db-status", data.dbStatus);

@@ -3,359 +3,42 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Linux経験者向けに、TerraformとAWSのWeb三層構成、CI/CD、監視運用を実装ベースで学ぶ教材サイトです。">
-  <title>AWS Infrastructure Field Guide</title>
+  <meta name="description" content="AWS学習アプリとランニングコース地図アプリを選択できるTomcat上のWebアプリランチャーです。">
+  <title>AWS Learning Web Apps</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <main class="launcher">
+    <section class="hero">
+      <p class="eyebrow">TOMCAT WEB APPS</p>
+      <h1>学習アプリと地図アプリを<br>同じAWS基盤で動かす。</h1>
+      <p class="lead">1つのALB、1つのEC2/Tomcat、1つのWARの中で、用途の違う2つのWebアプリをURLパスで分けて公開します。</p>
+    </section>
 
-  <header class="site-header">
-    <a class="brand" href="#top" aria-label="ページ先頭へ">
-      <span class="brand-mark">AWS</span>
-      <span>Infrastructure Field Guide</span>
-    </a>
-    <div class="header-meta">
-      <span>Linux経験者向け</span>
-      <span class="status-dot" aria-hidden="true"></span>
-      <span id="header-runtime-status">環境情報を確認中</span>
-    </div>
-  </header>
+    <section class="app-grid" aria-label="アプリ一覧">
+      <a class="app-card aws" href="aws-learning/">
+        <span class="badge">AWS STUDY</span>
+        <h2>AWS Infrastructure Field Guide</h2>
+        <p>Terraform、CI/CD、ALB、EC2、RDS、Secrets Manager、監視運用を章ごとに学べる参考書兼問題サイトです。</p>
+        <strong>開く</strong>
+      </a>
 
-  <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+      <a class="app-card run" href="run-route/">
+        <span class="badge">RUNNING MAP</span>
+        <h2>RunRoute Japan</h2>
+        <p>現在地と目的地から実際に走れる道を引き、高低差とコース上の現在位置を確認する地図アプリです。</p>
+        <strong>開く</strong>
+      </a>
+    </section>
 
-  <div class="mobile-navigation">
-    <label for="chapter-select">章を選ぶ</label>
-    <select id="chapter-select">
-      <option value="#top">トップ</option>
-      <option value="#chapter-1">01 全体アーキテクチャ</option>
-      <option value="#chapter-2">02 VPCとネットワーク</option>
-      <option value="#chapter-3">03 IAM・SG・Secret</option>
-      <option value="#chapter-4">04 ALB・EC2・Auto Scaling</option>
-      <option value="#chapter-5">05 Apache・Tomcat・WAR</option>
-      <option value="#chapter-6">06 RDSとAP–DB接続</option>
-      <option value="#chapter-7">07 Route 53・ACM・HTTPS</option>
-      <option value="#chapter-8">08 Terraform</option>
-      <option value="#chapter-9">09 CI/CD</option>
-      <option value="#chapter-10">10 監視と運用</option>
-      <option value="#troubleshooting">実践トラブルシュート</option>
-    </select>
-  </div>
-
-  <div class="page-shell">
-    <aside class="sidebar" aria-label="章ナビゲーション">
-      <p class="sidebar-label">CONTENTS</p>
-      <nav>
-        <a href="#chapter-1"><span>01</span>全体アーキテクチャ</a>
-        <a href="#chapter-2"><span>02</span>VPCとネットワーク</a>
-        <a href="#chapter-3"><span>03</span>IAM・SG・Secret</a>
-        <a href="#chapter-4"><span>04</span>ALB・EC2・Auto Scaling</a>
-        <a href="#chapter-5"><span>05</span>Apache・Tomcat・WAR</a>
-        <a href="#chapter-6"><span>06</span>RDSとAP–DB接続</a>
-        <a href="#chapter-7"><span>07</span>Route 53・ACM・HTTPS</a>
-        <a href="#chapter-8"><span>08</span>Terraform</a>
-        <a href="#chapter-9"><span>09</span>CI/CD</a>
-        <a href="#chapter-10"><span>10</span>監視と運用</a>
-        <a href="#troubleshooting"><span>LAB</span>トラブルシュート</a>
-      </nav>
-      <div class="score-panel" aria-live="polite">
-        <span>演習スコア</span>
-        <strong><span id="score-correct">0</span> / <span id="score-total">25</span></strong>
-        <small><span id="score-answered">0</span>問回答済み</small>
-        <button id="reset-quiz" type="button">回答をリセット</button>
-      </div>
-    </aside>
-
-    <main id="main-content">
-      <section class="hero" id="top">
-        <div class="hero-copy">
-          <p class="eyebrow">BUILD · TRACE · TROUBLESHOOT</p>
-          <h1>AWSの仕組みを<br><em>通信の流れ</em>で理解する。</h1>
-          <p class="hero-lead">Terraformで構築したWeb三層環境を題材に、サービス名の暗記ではなく「どこから、どこへ、何の権限で通信するか」を学ぶ実践ガイドです。</p>
-          <div class="hero-actions">
-            <a class="button primary" href="#chapter-1">学習を始める</a>
-            <a class="button secondary" href="#troubleshooting">障害演習へ</a>
-          </div>
-        </div>
-        <div class="terminal-card" aria-label="アーキテクチャの通信経路">
-          <div class="terminal-bar"><i></i><i></i><i></i><span>request-flow.txt</span></div>
-          <ol class="request-flow">
-            <li><b>01</b><span>Browser</span><code>HTTPS :443</code></li>
-            <li><b>02</b><span>Route 53 → ALB</span><code>Alias A</code></li>
-            <li><b>03</b><span>Apache → Tomcat</span><code>localhost:8080</code></li>
-            <li><b>04</b><span>Java → Secrets Manager</span><code>GetSecretValue</code></li>
-            <li><b>05</b><span>Java → RDS MySQL</span><code>TCP :3306</code></li>
-          </ol>
-        </div>
-      </section>
-
-      <section class="runtime" aria-labelledby="runtime-title">
-        <div class="section-heading compact">
-          <p class="kicker">LIVE ENVIRONMENT</p>
-          <h2 id="runtime-title">この画面を動かしている環境</h2>
-          <p>教材は静的HTML/CSS/JavaScript、稼働情報は同一WAR内のJava APIから取得します。DB障害時も教材本文は読めます。</p>
-        </div>
-        <div class="runtime-grid">
-          <article class="metric-card" id="db-status-card"><span>DB connection</span><strong id="db-status">確認中…</strong></article>
-          <article class="metric-card"><span>Instance (masked)</span><strong id="instance-id">確認中…</strong></article>
-          <article class="metric-card"><span>Availability Zone</span><strong id="availability-zone">確認中…</strong></article>
-          <article class="metric-card"><span>Application version</span><strong id="app-version">確認中…</strong></article>
-        </div>
-        <div class="db-message-panel">
-          <div><span class="panel-icon">DB</span><div><h3>Messages from MySQL</h3><p id="runtime-time">API応答を待っています。</p></div></div>
-          <div id="db-messages" class="db-messages"><p class="muted">接続後に初期データを表示します。</p></div>
-        </div>
-      </section>
-
-      <section class="service-atlas" aria-labelledby="atlas-title">
-        <div class="section-heading">
-          <p class="kicker">SERVICE ATLAS</p>
-          <h2 id="atlas-title">今回使うサービスの役割</h2>
-          <p>同じサービスでも「データプレーンの通信」と「管理操作」を分けて見ると、障害箇所を絞りやすくなります。</p>
-        </div>
-        <div class="atlas-grid">
-          <article><span>ENTRY</span><h3>Route 53 / ACM / ALB</h3><p>名前解決、TLS終端、正常なEC2への振り分け。</p></article>
-          <article><span>COMPUTE</span><h3>EC2 / Auto Scaling</h3><p>ApacheとTomcatを実行し、必要台数を維持。</p></article>
-          <article><span>DATA</span><h3>RDS / Secrets Manager</h3><p>データ永続化と認証情報の安全な受け渡し。</p></article>
-          <article><span>DELIVERY</span><h3>CodePipeline / Build / Deploy</h3><p>GitHubの変更を検証・構築・配布。</p></article>
-          <article><span>CONTROL</span><h3>Terraform / S3 / DynamoDB</h3><p>構成をコード化し、stateを共有・排他制御。</p></article>
-          <article><span>OPERATE</span><h3>SSM / CloudWatch / SNS</h3><p>SSHを開けずに運用し、ログ・メトリクス・通知を扱う。</p></article>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-1" data-chapter="1">
-        <div class="chapter-number">CHAPTER 01</div>
-        <div class="section-heading"><h2>全体アーキテクチャと責任分担</h2><p>最初に「1回のHTTPリクエスト」と「1回のデプロイ」が通る経路を別々に整理します。</p></div>
-        <div class="learning-grid">
-          <article class="concept-card"><h3>ユーザー通信</h3><ol class="numbered"><li>Route 53が名前をALBへ解決</li><li>ALBが正常なEC2を選択</li><li>ApacheがTomcatへreverse proxy</li><li>JavaがSecretを取得してRDSへ接続</li></ol></article>
-          <article class="concept-card"><h3>デプロイ通信</h3><ol class="numbered"><li>CodeConnectionsがGitHub変更を取得</li><li>CodeBuildがTerraformとWARをbuild</li><li>S3 artifactをCodeDeployが取得</li><li>hookで配置・DB確認・service検証</li></ol></article>
-        </div>
-        <aside class="field-note"><strong>実務の視点</strong><p>構成図には通信方向、protocol/port、認証方式、障害時の影響範囲を併記します。「サービスがある」だけでは運用設計になりません。</p></aside>
-        <div class="quiz-set" aria-label="第1章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q1</span>ブラウザはRoute 53を経由してHTTPリクエスト本文をALBへ送る。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>Route 53の役割はDNS名前解決です。HTTPリクエスト自体は、名前解決で得たALBの宛先へ送られます。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q2</span>ユーザー通信とデプロイ通信は経路も権限も異なるため、分けて設計・調査する。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>ALB経由のWeb通信と、CodePipeline/CodeBuild/CodeDeployの管理操作では、利用主体・IAM権限・ログが異なります。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-2" data-chapter="2">
-        <div class="chapter-number">CHAPTER 02</div>
-        <div class="section-heading"><h2>VPC・Subnet・Route Table</h2><p>public/privateは名前ではなく、routeとpublic IP、到達経路の組み合わせで決まります。</p></div>
-        <div class="definition-list">
-          <div><dt>Public subnet</dt><dd>Internet Gatewayへのdefault routeを持ち、ALBとNAT Gatewayを配置。</dd></div>
-          <div><dt>Private app subnet</dt><dd>EC2を配置。外向き通信はNAT Gateway、またはVPC endpointを利用。</dd></div>
-          <div><dt>Private DB subnet</dt><dd>RDSを配置。Internet向けdefault routeを持たず、VPC内通信だけを利用。</dd></div>
-        </div>
-        <pre class="code-block"><code>Internet → IGW → public ALB
-private EC2 → NAT Gateway → AWS public API / package repository
-private EC2 → VPC local route → private RDS endpoint</code></pre>
-        <aside class="field-note warning"><strong>コストと可用性</strong><p>NAT Gatewayは時間・通信量課金があります。学習環境の1台構成と、本番のAZごとの冗長構成は目的が違います。S3 gateway endpointやSecrets Manager interface endpointとの費用・可用性も比較します。</p></aside>
-        <div class="quiz-set" aria-label="第2章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q3</span>Subnet名に「private」と付ければ、Internetから自動的に隔離される。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>名前は制御になりません。route table、public IP、IGW、Security Group、NACLなどの実設定で到達性が決まります。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q4</span>EC2から同一VPC内のRDSへは、通常NAT Gatewayを経由しない。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>RDS endpointはprivate IPへ名前解決され、VPCのlocal routeで接続します。NATは主にprivate subnetから外部へ出る通信で使います。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-3" data-chapter="3">
-        <div class="chapter-number">CHAPTER 03</div>
-        <div class="section-heading"><h2>IAM・Security Group・Secrets Manager</h2><p>IAMは「AWS APIを誰が操作できるか」、Security Groupは「network上でどこへ接続できるか」を制御します。</p></div>
-        <div class="compare-table" role="table" aria-label="認可方式の比較">
-          <div class="table-row head" role="row"><span>制御</span><span>守る対象</span><span>今回の例</span></div>
-          <div class="table-row" role="row"><strong>IAM Role</strong><span>AWS API</span><span>EC2から対象Secretだけを取得</span></div>
-          <div class="table-row" role="row"><strong>Security Group</strong><span>network flow</span><span>App SGからDB SGの3306だけ許可</span></div>
-          <div class="table-row" role="row"><strong>DB authentication</strong><span>MySQL</span><span>Secret内のusername/passwordで接続</span></div>
-        </div>
-        <div class="callout"><h3>Credentialを置かない</h3><p>Access KeyはrepositoryやEC2の設定ファイルへ保存しません。EC2 Instance Profileから短期credentialを取得し、Secretの値ではなくARNだけを環境設定として渡します。</p></div>
-        <aside class="field-note"><strong>最小権限</strong><p><code>secretsmanager:GetSecretValue</code> のResourceを対象Secret ARNへ限定します。Terraform stateにもpasswordが保存され得るため、state bucketも機密情報として保護します。</p></aside>
-        <div class="quiz-set" aria-label="第3章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q5</span>RDSの3306番portをSecurity Groupで許可すれば、IAM権限なしでもSecrets Managerからpasswordを取得できる。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>network到達性とAWS APIの認可は別です。Secret取得にはIAM、RDS接続にはSGとDB認証の両方が必要です。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q6</span>Security Group参照を使うと、IP範囲ではなく「App SGを持つresource」からの通信に限定できる。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>App SGをDB SG ingressのsourceにすることで、instanceのprivate IPが変わっても役割単位で制御できます。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-4" data-chapter="4">
-        <div class="chapter-number">CHAPTER 04</div>
-        <div class="section-heading"><h2>ALB・EC2・Auto Scaling</h2><p>ALBは入口、Launch Templateはinstanceの設計図、Auto Scaling Groupは望ましい台数を維持するcontrollerです。</p></div>
-        <div class="learning-grid three">
-          <article class="concept-card"><span class="tag">ALB</span><h3>振り分け</h3><p>listenerで受信し、target groupのhealthyなinstanceへ転送します。</p></article>
-          <article class="concept-card"><span class="tag">Launch Template</span><h3>再現可能な起動</h3><p>AMI、instance type、IAM profile、user data、SGを定義します。</p></article>
-          <article class="concept-card"><span class="tag">ASG</span><h3>台数維持</h3><p>desired/min/maxとhealth checkに基づきinstanceを補充します。</p></article>
-        </div>
-        <div class="callout"><h3>なぜ <code>/health</code> はDBを見ないのか</h3><p>静的なApache health checkにより、一時的なDB障害だけで全EC2がunhealthyとなる連鎖を避けます。一方、深い正常性は別の監視やデプロイ検証で確認します。</p></div>
-        <aside class="field-note warning"><strong>実務の注意</strong><p>health checkを軽くしすぎると業務障害を検知できず、重くしすぎると依存先障害で全targetを外します。livenessとreadiness、依存先監視を分けて設計します。</p></aside>
-        <div class="quiz-set" aria-label="第4章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q7</span>ALBはtarget groupでhealthyと判定されたEC2へrequestを転送する。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>listener ruleがtarget groupへforwardし、health checkに合格したtargetが転送対象になります。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q8</span>Auto Scaling Groupを使えば、アプリを保存したEC2を手動修正してもその変更は永続的に保証される。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>instanceは置換されます。必要な設定はLaunch Template/user data、AMI、CodeDeployなど再現可能な仕組みに入れます。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-5" data-chapter="5">
-        <div class="chapter-number">CHAPTER 05</div>
-        <div class="section-heading"><h2>Apache・Tomcat・Java WAR</h2><p>1台のEC2内でも、Web serverとapplication serverの責務を分離しています。</p></div>
-        <div class="layer-stack">
-          <div><span>Apache :80</span><p><code>/health</code> を静的応答し、その他をlocalhostへproxy。</p></div>
-          <div><span>Tomcat :8080</span><p><code>ROOT.war</code> をcontext root <code>/</code> として展開。</p></div>
-          <div><span>Static + Servlet</span><p><code>index.html</code> は教材、<code>/api/status</code> はJavaの動的API。</p></div>
-        </div>
-        <pre class="code-block"><code>src/main/webapp/index.html  ┐
-src/main/webapp/styles.css │  mvn package → ROOT.war
-src/main/webapp/app.js     │
-HomeServlet.java           ┘</code></pre>
-        <aside class="field-note"><strong>今回の改善点</strong><p>画面全体をServletで文字列生成せず、静的資材とJSON APIを分離しました。CSSがHTMLとして返るmapping事故を避け、教材だけの差し替えも容易になります。</p></aside>
-        <div class="quiz-set" aria-label="第5章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q9</span><code>ROOT.war</code> はTomcatで通常context root <code>/</code> として公開される。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>Tomcatの命名規則によりROOT.warはroot contextになります。別名のWARなら通常その名前がcontext pathになります。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q10</span>CSSへアクセスしてContent-Typeがtext/htmlでも、HTTP 200なら配信は正常である。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>200だけでは不十分です。CSS URLがfallback HTMLを返すと見た目が崩れます。Content-Typeとresponse bodyも確認します。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-6" data-chapter="6">
-        <div class="chapter-number">CHAPTER 06</div>
-        <div class="section-heading"><h2>RDS MySQLとAP–DB接続</h2><p>JavaアプリがSecretを取得してからSQL結果を画面へ出すまでを追います。</p></div>
-        <ol class="timeline">
-          <li><span>1</span><div><h3>設定を読む</h3><p>systemd経由の <code>DB_SECRET_ARN</code> を参照。Secret値は設定ファイルへ書かない。</p></div></li>
-          <li><span>2</span><div><h3>Secretを取得</h3><p>EC2 Roleの一時credentialでSecrets Manager <code>GetSecretValue</code> を実行。</p></div></li>
-          <li><span>3</span><div><h3>JDBC接続</h3><p>host・port・dbname・username・passwordからJDBC connectionを確立。</p></div></li>
-          <li><span>4</span><div><h3>Queryと返却</h3><p><code>messages</code> をSELECTし、JSON APIからbrowserへ返却。DOM挿入時はtextとして扱う。</p></div></li>
-        </ol>
-        <div class="learning-grid">
-          <article class="concept-card"><h3>デプロイ時</h3><p><code>check_db.py</code> が接続確認、<code>seed_db.py</code> がtableと初期データを冪等に作成します。</p></article>
-          <article class="concept-card"><h3>画面表示時</h3><p>Java APIがRDSを参照します。失敗時はSecretやhostを返さず、例外classだけをstatusに表示します。</p></article>
-        </div>
-        <aside class="field-note warning"><strong>本番化の論点</strong><p>connection pool、query timeout、RDS Proxy、TLS証明書検証、Secret rotation、migration tool、transaction境界を追加検討します。</p></aside>
-        <div class="quiz-set" aria-label="第6章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q11</span><code>seed_db.py</code> を複数回実行しても同じ初期データが無制限に重複しない設計が望ましい。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>再実行可能な冪等性は、自動デプロイや障害復旧で重要です。CREATE IF NOT EXISTSや一意キーを利用します。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q12</span>Secrets Managerを使えば、Terraform stateにSecret値が入る可能性はなくなる。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>TerraformがSecret valueを作成・設定するとstateへ保持され得ます。remote stateの暗号化、versioning、access制御が必要です。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-7" data-chapter="7">
-        <div class="chapter-number">CHAPTER 07</div>
-        <div class="section-heading"><h2>Route 53・ACM・HTTPS</h2><p>domain名、証明書、listenerをつなぎ、利用者が検証できるHTTPS経路を作ります。</p></div>
-        <div class="learning-grid three">
-          <article class="concept-card"><span class="tag">Route 53</span><h3>Alias record</h3><p><code>app.example.com</code> をALBへ向けます。ALBのIPを固定値として登録しません。</p></article>
-          <article class="concept-card"><span class="tag">ACM</span><h3>Certificate</h3><p>ALBと同じregionの証明書を用意し、domain validationを完了します。</p></article>
-          <article class="concept-card"><span class="tag">Listener</span><h3>TLS termination</h3><p>443で証明書を提示し、80は443へredirectします。</p></article>
-        </div>
-        <pre class="code-block"><code>Browser -- HTTPS --> ALB -- HTTP --> Apache
-          TLS検証       TLS終端       private network</code></pre>
-        <aside class="field-note"><strong>確認観点</strong><p>DNS recordだけでなく、証明書のSAN、有効期限、region、443 listener、SG ingress、HTTP redirectを1本の経路として確認します。</p></aside>
-        <div class="quiz-set" aria-label="第7章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q13</span>ALB用ACM証明書は、どのregionで発行しても同じように設定できる。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>ALBへ設定するACM証明書はALBと同じregionに必要です。CloudFront用証明書のregion要件とは分けて覚えます。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q14</span>Route 53 AliasはALBの変動する宛先を名前で参照するために使える。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>ALBの個別IPを固定せず、AWS resourceへのAliasとしてrecordを作成します。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-8" data-chapter="8">
-        <div class="chapter-number">CHAPTER 08</div>
-        <div class="section-heading"><h2>Terraformとremote state</h2><p>構築手順ではなく、望ましい構成を宣言し、planで差分を確認してapplyします。</p></div>
-        <div class="command-flow">
-          <div><code>fmt</code><span>表記を統一</span></div><b>→</b><div><code>validate</code><span>構文・schema確認</span></div><b>→</b><div><code>plan</code><span>変更差分を審査</span></div><b>→</b><div><code>apply</code><span>実環境へ反映</span></div>
-        </div>
-        <div class="learning-grid">
-          <article class="concept-card"><h3>S3 backend</h3><p>stateをlocal端末から分離し、暗号化・versioning・access制御を適用します。</p></article>
-          <article class="concept-card"><h3>Lock</h3><p>同時applyによるstate競合を防ぎます。利用するTerraform versionに合うlocking方式を選びます。</p></article>
-        </div>
-        <aside class="field-note warning"><strong>planの読み方</strong><p><code>-/+</code> は置換です。RDS、ALB、Launch Templateなどの置換がdata消失や停止につながらないか、件数だけでなくresource単位で確認します。</p></aside>
-        <div class="quiz-set" aria-label="第8章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q15</span><code>terraform plan</code> が成功すれば、apply後のapplication疎通も保証される。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>planは構成差分を予測しますが、起動script、networkの実疎通、アプリ動作までは保証しません。後段の検証が必要です。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q16</span>remote stateには機密値が含まれる前提でaccessを制限する。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden><code>sensitive = true</code> はCLI表示を抑えますが、stateから値を消す機能ではありません。state自体を保護します。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-9" data-chapter="9">
-        <div class="chapter-number">CHAPTER 09</div>
-        <div class="section-heading"><h2>CodePipeline・CodeBuild・CodeDeploy</h2><p>source取得からservice検証まで、stageごとに責務とlogの場所が変わります。</p></div>
-        <div class="pipeline" aria-label="デプロイパイプライン">
-          <div><span>1</span><strong>Source</strong><small>GitHub / Connection</small></div>
-          <i>→</i><div><span>2</span><strong>Plan</strong><small>Terraform validate &amp; plan</small></div>
-          <i>→</i><div><span>3</span><strong>Apply</strong><small>Infrastructure</small></div>
-          <i>→</i><div><span>4</span><strong>Wait</strong><small>ASG / SSM readiness</small></div>
-          <i>→</i><div><span>5</span><strong>Build</strong><small>Maven → ROOT.war</small></div>
-          <i>→</i><div><span>6</span><strong>Deploy</strong><small>Hooks &amp; validation</small></div>
-        </div>
-        <div class="compare-table" role="table" aria-label="CI/CDサービスの責務">
-          <div class="table-row head" role="row"><span>サービス</span><span>責務</span><span>主な確認先</span></div>
-          <div class="table-row"><strong>CodePipeline</strong><span>stage間の順序とartifact受け渡し</span><span>action execution</span></div>
-          <div class="table-row"><strong>CodeBuild</strong><span>command実行、Terraform/Maven build</span><span>CloudWatch Logs</span></div>
-          <div class="table-row"><strong>CodeDeploy</strong><span>EC2へ配置しlifecycle hookを実行</span><span>instance event diagnostics</span></div>
-        </div>
-        <aside class="field-note"><strong>調査の原則</strong><p>Pipelineの赤いstage名だけで原因を決めず、execution ID → external build/deployment ID → 詳細logの順に辿ります。異なるexecutionのstage状態を混ぜないことも重要です。</p></aside>
-        <div class="quiz-set" aria-label="第9章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q17</span>CodePipelineのIAM RoleにGitHub repositoryへのaccessがあれば、GitHub App側のrepository許可は不要である。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>AWS側のUseConnection権限に加えて、GitHub App installation側でも対象repositoryへのaccessが必要です。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q18</span>CodeDeployのAfterInstallが失敗すると、ApplicationStartとValidateServiceがskipされる場合がある。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>lifecycle hookは順序実行されます。AfterInstallでexit code 1なら後続hookへ進めずdeploymentが失敗します。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter" id="chapter-10" data-chapter="10">
-        <div class="chapter-number">CHAPTER 10</div>
-        <div class="section-heading"><h2>Systems Manager・CloudWatch・SNS</h2><p>運用経路を最初から設計し、SSH portや長期鍵に依存しない調査方法を用意します。</p></div>
-        <div class="learning-grid three">
-          <article class="concept-card"><span class="tag">SSM</span><h3>Session Manager</h3><p>IAM認証とaudit可能な経路でprivate EC2へ接続。Mac側にはpluginが必要です。</p></article>
-          <article class="concept-card"><span class="tag">CloudWatch</span><h3>Logs / Metrics / Alarms</h3><p>OS・Apache・Tomcat・app logとCPU等を集約し、しきい値を監視。</p></article>
-          <article class="concept-card"><span class="tag">SNS</span><h3>Notification</h3><p>alarmの状態変化をemail endpointへ通知。subscription確認も運用手順に含めます。</p></article>
-        </div>
-        <div class="callout"><h3>Patch運用</h3><p>Patch Baseline、Patch Group、Maintenance Windowで「何を」「どのinstanceへ」「いつ適用するか」を分離します。適用前後のbackup・再起動・health確認も計画します。</p></div>
-        <aside class="field-note warning"><strong>ログの安全性</strong><p>Secret value、password、Access Key、connection stringを出力しません。障害調査に必要なerror class、request ID、件数などを残します。</p></aside>
-        <div class="quiz-set" aria-label="第10章 確認問題">
-          <div class="quiz-card" data-kind="boolean" data-correct="true"><p><span>Q19</span>Session Managerを使えば、EC2へSSH ingressを開けずにshell操作できる構成を作れる。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>SSM Agent、instance role、SSM endpointへの到達性、利用者IAM権限などを満たせば、TCP/22を公開せず接続できます。</p></div>
-          <div class="quiz-card" data-kind="boolean" data-correct="false"><p><span>Q20</span>CloudWatch Alarmを作成すれば、SNS email subscriptionの承認前でも通知メールは届く。</p><div class="answer-buttons"><button type="button" data-choice="true">○ 正しい</button><button type="button" data-choice="false">× 誤り</button></div><div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>Email endpointは確認メール内のlinkでsubscriptionを承認するまで通知を受け取れません。</p></div>
-        </div>
-      </section>
-
-      <section class="chapter lab" id="troubleshooting">
-        <div class="chapter-number">TROUBLESHOOTING LAB</div>
-        <div class="section-heading"><h2>症状から次の一手を選ぶ</h2><p>この構成で実際に遭遇しやすい事象をもとにした5問です。最初に確認すべき情報を選んでください。</p></div>
-
-        <div class="scenario quiz-card" data-kind="choice">
-          <div class="scenario-head"><span>CASE 01</span><strong>SOURCE_FAILED</strong></div>
-          <h3>Source stageが即時失敗。ConnectionはAVAILABLE、Pipeline RoleにもUseConnectionがある。</h3>
-          <p>次に確認する項目は？</p>
-          <div class="choice-list"><button type="button" data-choice="a">A. RDSのSecurity Group</button><button type="button" data-choice="b" data-correct="true">B. GitHub App installationのrepository access</button><button type="button" data-choice="c">C. Tomcatのcatalina.out</button></div>
-          <div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>AWS側のConnectionがAVAILABLEでも、GitHub側のAWS Connector for GitHubが対象repositoryを許可していなければsourceを取得できません。</p>
-        </div>
-
-        <div class="scenario quiz-card" data-kind="choice">
-          <div class="scenario-head"><span>CASE 02</span><strong>HEALTH_CONSTRAINTS</strong></div>
-          <h3>CodeDeployが失敗し、AfterInstallのlogにMySQL接続timeoutがある。</h3>
-          <p>最初の切り分けとして適切なのは？</p>
-          <div class="choice-list"><button type="button" data-choice="a">A. Pythonのdeprecation warningだけを修正する</button><button type="button" data-choice="b" data-correct="true">B. EC2→RDSのroute・SG・RDS statusを確認する</button><button type="button" data-choice="c">C. Route 53 recordを削除する</button></div>
-          <div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden><code>socket.timeout</code> はnetwork到達性を優先して調査します。warningは重要な保守課題ですが、今回の直接原因とは限りません。</p>
-        </div>
-
-        <div class="scenario quiz-card" data-kind="choice">
-          <div class="scenario-head"><span>CASE 03</span><strong>UNSTYLED_PAGE</strong></div>
-          <h3>HTMLは表示されるがデザインが崩れ、<code>/styles.css</code> はHTTP 200。</h3>
-          <p>追加で確認すべき内容は？</p>
-          <div class="choice-list"><button type="button" data-choice="a" data-correct="true">A. Content-Typeとresponse bodyが本当にCSSか</button><button type="button" data-choice="b">B. RDS backup retention</button><button type="button" data-choice="c">C. DynamoDBのlock record</button></div>
-          <div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden>Servlet mappingやfallbackによりCSS URLへHTMLが返ることがあります。status codeだけでなくheaderと本文を確認します。</p>
-        </div>
-
-        <div class="scenario quiz-card" data-kind="choice">
-          <div class="scenario-head"><span>CASE 04</span><strong>DB_API_FAILED</strong></div>
-          <h3><code>/health</code> は200だが、画面のDB connectionだけ失敗している。</h3>
-          <p>この状態から言えることは？</p>
-          <div class="choice-list"><button type="button" data-choice="a">A. ALBは必ず異常である</button><button type="button" data-choice="b" data-correct="true">B. Apacheは生存しているが、Secret取得またはDB経路は別途調査が必要</button><button type="button" data-choice="c">C. GitHub branch名だけが原因である</button></div>
-          <div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden><code>/health</code> はDB非依存の静的応答です。Tomcat log、application log、IAM、Secrets Manager、DNS、SG、RDSを順に確認します。</p>
-        </div>
-
-        <div class="scenario quiz-card" data-kind="choice">
-          <div class="scenario-head"><span>CASE 05</span><strong>MIXED_EXECUTIONS</strong></div>
-          <h3>Pipeline stateでPlanはFailedだが、後段のDeployはSucceededと表示されている。</h3>
-          <p>正しい調査方法は？</p>
-          <div class="choice-list"><button type="button" data-choice="a">A. 表の各stageは必ず同じ実行なのでそのまま判断する</button><button type="button" data-choice="b" data-correct="true">B. stageごとのpipelineExecutionIdを確認し、同じexecutionだけを追う</button><button type="button" data-choice="c">C. 成功したDeployを削除してから考える</button></div>
-          <div class="quiz-feedback" hidden></div><p class="quiz-explanation" hidden><code>get-pipeline-state</code> は各stageのlatest executionを示すため、異なるpipeline実行が混在することがあります。execution IDで揃えてaction履歴を確認します。</p>
-        </div>
-      </section>
-
-      <section class="finish-card">
-        <p class="kicker">NEXT STEP</p>
-        <h2>25問を解いたら、AWS Consoleではなく通信経路から説明してみる。</h2>
-        <p>「ALBがある」ではなく、「Route 53 AliasでALBへ名前解決し、443 listenerでTLSを終端し、health check済みのtargetへ転送する」と説明できれば、設計と障害対応の土台ができています。</p>
-        <a class="button primary" href="#top">最初から振り返る</a>
-      </section>
-    </main>
-  </div>
-
-  <footer><p>AWS Infrastructure Field Guide — 実装ベースの学習環境</p><p>画面内のaccount ID、ARN、domain、emailなどは公開用に匿名化してください。</p></footer>
+    <section class="url-guide">
+      <h2>公開URL</h2>
+      <dl>
+        <div><dt>トップ</dt><dd><code>/</code></dd></div>
+        <div><dt>AWS教材</dt><dd><code>/aws-learning/</code></dd></div>
+        <div><dt>ランニング地図</dt><dd><code>/run-route/</code></dd></div>
+      </dl>
+    </section>
+  </main>
 </body>
 </html>

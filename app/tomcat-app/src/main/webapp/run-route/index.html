@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="現在地と目的地からランニングコースを作成し、高低差とコース上の現在位置を確認する日本国内向け地図アプリです。">
+  <title>RunRoute Japan</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQG9OKyk9iawVLwIYd9MNw3QfErHs=" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#route-panel">ルート情報へ移動</a>
+
+  <main class="app-shell">
+    <section class="map-stage" aria-label="ランニングコース地図">
+      <div id="map" class="map-canvas"></div>
+      <div class="map-overlay top">
+        <div class="brand-block">
+          <span class="brand-mark">RUN</span>
+          <div>
+            <h1>RunRoute Japan</h1>
+            <p>現在地から、実際の道をたどるランニングコースと高低差を確認します。</p>
+          </div>
+        </div>
+        <button id="locate-button" class="icon-button" type="button" title="現在地を取得" aria-label="現在地を取得">◎</button>
+      </div>
+      <div class="map-overlay bottom">
+        <p id="status-message">地図をクリックして目的地を指定してください。現在地取得にはHTTPSが必要です。</p>
+      </div>
+    </section>
+
+    <aside id="route-panel" class="route-panel" aria-label="ルート操作と高低差">
+      <section class="panel-section controls">
+        <p class="eyebrow">COURSE BUILDER</p>
+        <h2>走れる道でコース作成</h2>
+        <p class="lead">現在地を取得してから地図上の目的地をクリックし、徒歩向け道路ネットワークで経路を引きます。</p>
+
+        <div class="control-grid">
+          <button id="use-center-button" class="command-button secondary" type="button">地図中心をスタートにする</button>
+          <button id="sample-button" class="command-button secondary" type="button">皇居周辺サンプル</button>
+        </div>
+        <button id="build-route-button" class="command-button primary" type="button" disabled>コースを作成</button>
+        <button id="track-button" class="command-button ghost" type="button" disabled>リアルタイム判定を開始</button>
+
+        <div class="coordinate-box">
+          <div><span>Start</span><strong id="start-label">未設定</strong></div>
+          <div><span>Goal</span><strong id="goal-label">地図クリックで指定</strong></div>
+        </div>
+      </section>
+
+      <section class="panel-section metrics" aria-label="コース指標">
+        <div class="metric primary">
+          <span>距離</span>
+          <strong id="distance-value">-- km</strong>
+        </div>
+        <div class="metric">
+          <span>上り累積</span>
+          <strong id="gain-value">-- m</strong>
+        </div>
+        <div class="metric">
+          <span>下り累積</span>
+          <strong id="loss-value">-- m</strong>
+        </div>
+        <div class="metric">
+          <span>標高差</span>
+          <strong id="range-value">-- m</strong>
+        </div>
+      </section>
+
+      <section class="panel-section elevation">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">ELEVATION</p>
+            <h2>高低差プロファイル</h2>
+          </div>
+          <span id="elevation-source">未取得</span>
+        </div>
+        <canvas id="elevation-chart" width="760" height="260" aria-label="コース高低差グラフ"></canvas>
+        <div class="chart-scale">
+          <span id="min-elevation">-- m</span>
+          <span id="max-elevation">-- m</span>
+        </div>
+      </section>
+
+      <section class="panel-section tracking">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">LIVE CHECK</p>
+            <h2>現在地のコース判定</h2>
+          </div>
+          <span id="track-state">待機中</span>
+        </div>
+        <div class="tracking-card" id="tracking-card">
+          <strong id="on-route-label">ルート未作成</strong>
+          <p id="nearest-distance">コースとの距離を表示します。</p>
+          <div class="progress-rail"><span id="progress-bar"></span></div>
+          <small id="progress-label">進捗 --%</small>
+        </div>
+      </section>
+
+      <section class="panel-section notes">
+        <h2>利用上のポイント</h2>
+        <ul>
+          <li>経路はOpenStreetMapベースのOSRM徒歩ルートを使います。私有地、通行止め、夜間閉鎖、階段、混雑などは現地状況を優先してください。</li>
+          <li>現在地のリアルタイム判定はブラウザの位置情報APIを使います。公開環境ではHTTPS化が必要です。</li>
+          <li>標高は国土地理院DEMを優先し、取得できない場合はOpen-MeteoのCopernicus DEM GLO-90標高APIへ切り替えます。</li>
+          <li>外部APIの公開エンドポイントは学習・試作用です。継続運用する場合は利用規約、制限、商用利用条件を確認し、必要に応じて契約APIへ置き換えてください。</li>
+        </ul>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>
